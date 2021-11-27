@@ -1,5 +1,5 @@
 {
-  "pluginAlias": "ExampleHomebridgePlugin",
+  "pluginAlias": "AugustLocks",
   "pluginType": "platform",
   "singular": true,
   "schema": {
@@ -9,8 +9,38 @@
         "title": "Name",
         "type": "string",
         "required": true,
-        "default": "Example Dynamic Platform"
-      }
+        "default": "August Locks"
+      },
+      "email": {
+				"title": "Email",
+				"type": "string",
+				"required": true
+			},
+			"phone": {
+				"title": "Phone",
+				"type": "string",
+				"required": false
+			},
+			"password": {
+				"title": "Password",
+				"type": "string",
+				"required": true
+			},
+			"code": {
+				"title": "2FA Code",
+				"type": "string",
+				"required": false
+			},
+			"securityToken": {
+				"title": "Security Token",
+				"type": "string",
+				"required": false
+			},
+			"installId": {
+				"title": "Installation ID",
+				"type": "string",
+				"required": true
+			}
     }
   }
 }

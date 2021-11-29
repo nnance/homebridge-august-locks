@@ -2,7 +2,7 @@ import { API, DynamicPlatformPlugin, Logger, PlatformAccessory, PlatformConfig, 
 
 import { PLATFORM_NAME, PLUGIN_NAME } from './settings';
 import { ExamplePlatformAccessory } from './platformAccessory';
-import { augustLogin, augustValidateCode, augustValidateSession, augustGetHouses } from './august';
+import { AugustSessionOptions, augustStartSession, augustGetHouses } from './august';
 import { randomUUID } from 'crypto';
 
 /**
@@ -67,18 +67,18 @@ export class ExampleHomebridgePlatform implements DynamicPlatformPlugin {
       },
     ];
 
-    augustLogin(this.config['installId'], 'phone', '+14058319107', 'S00n3rs!', this.log).then(session => {
-      this.log.info(JSON.stringify(session));
-      const twoFactorCode = this.config['code'];
-      if (twoFactorCode === undefined || twoFactorCode.length === 0) {
-        augustValidateSession(session, this.log);
-      } else {
-        augustValidateCode(twoFactorCode, session, this.log).then(() => {
-          augustGetHouses(session, this.log).then(homes => {
-            this.log.info(JSON.stringify(homes));
-          });
-        });
-      }
+    const options: AugustSessionOptions = {
+      uuid: this.config['installId'],
+      idType: this.config['phone'] ? 'phone' : 'email',
+      identifier: this.config['phone'] ? this.config['phone'] : this.config['email'],
+      password: this.config['password'],
+      code: this.config['code'],
+    };
+
+    augustStartSession(options, this.log).then(session => {
+      augustGetHouses(session, this.log).then(homes => {
+        this.log.info(JSON.stringify(homes));
+      });
     });
 
     // loop over the discovered devices and register each one if it has not already been registered

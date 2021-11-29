@@ -13,7 +13,29 @@ export type AugustSession = {
   token: string;
 };
 
-export async function augustLogin(uuid: string, idType: string, identifier: string, password: string, log: Logger): Promise<AugustSession> {
+export type AugustSessionOptions = {
+  uuid: string;
+  idType: string;
+  identifier: string;
+  password: string;
+  code: string;  // 2FA code
+};
+
+export async function augustStartSession(options: AugustSessionOptions, log: Logger): Promise<AugustSession> {
+  const { uuid, code } = options;
+  const session = await augustLogin(uuid, 'phone', '+14058319107', 'S00n3rs!', log);
+  log.info(JSON.stringify(session));
+
+  if (code === undefined || code.length === 0) {
+    augustValidateSession(session, log);
+  } else {
+    await augustValidateCode(code, session, log);
+  }
+
+  return session;
+}
+
+async function augustLogin(uuid: string, idType: string, identifier: string, password: string, log: Logger): Promise<AugustSession> {
   const data = new TextEncoder().encode(
     JSON.stringify({
       identifier: `${idType}:${identifier}`,
@@ -62,7 +84,7 @@ export async function augustLogin(uuid: string, idType: string, identifier: stri
   });
 }
 
-export async function augustValidateSession(session: AugustSession, log: Logger) {
+async function augustValidateSession(session: AugustSession, log: Logger) {
   const data = new TextEncoder().encode(
     JSON.stringify({
       value: session.identifier,
@@ -104,7 +126,7 @@ export async function augustValidateSession(session: AugustSession, log: Logger)
   });
 }
 
-export async function augustValidateCode(code: AugustSession, session: AugustSession, log: Logger) {
+async function augustValidateCode(code: string, session: AugustSession, log: Logger) {
   const payload = {
     code,
   };
@@ -127,7 +149,7 @@ export async function augustValidateCode(code: AugustSession, session: AugustSes
     },
   };
 
-  return new Promise((resolve, reject) => {
+  new Promise((resolve, reject) => {
     const req = request(options, res => {
       log.info(`statusCode: ${res.statusCode}`);
 

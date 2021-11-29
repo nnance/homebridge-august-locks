@@ -35,6 +35,30 @@ export async function augustStartSession(options: AugustSessionOptions, log: Log
   return session;
 }
 
+function getRequestOptions(path: string, method: string): object {
+  return {
+    hostname: 'api-production.august.com',
+    port: 443,
+    path: path,
+    method: method,
+    headers: {
+      'x-august-api-key': '7cab4bbd-2693-4fc1-b99b-dec0fb20f9d4',
+      'x-kease-api-key': '7cab4bbd-2693-4fc1-b99b-dec0fb20f9d4',
+      'Content-Type': 'application/json',
+      'Accept-Version': '0.0.1',
+      'User-Agent': 'August/Luna-3.2.2',
+    },
+  };
+}
+
+function addToken(options: object, token:string): object {
+  const newOptions = {
+    ...options,
+  };
+  newOptions['headers']['x-august-access-token'] = token;
+  return newOptions;
+}
+
 async function augustLogin(uuid: string, idType: string, identifier: string, password: string, log: Logger): Promise<AugustSession> {
   const data = new TextEncoder().encode(
     JSON.stringify({
@@ -44,19 +68,7 @@ async function augustLogin(uuid: string, idType: string, identifier: string, pas
     }),
   );
 
-  const options = {
-    hostname: 'api-production.august.com',
-    port: 443,
-    path: '/session',
-    method: 'POST',
-    headers: {
-      'x-august-api-key': '7cab4bbd-2693-4fc1-b99b-dec0fb20f9d4',
-      'x-kease-api-key': '7cab4bbd-2693-4fc1-b99b-dec0fb20f9d4',
-      'Content-Type': 'application/json',
-      'Accept-Version': '0.0.1',
-      'User-Agent': 'August/Luna-3.2.2',
-    },
-  };
+  const options = getRequestOptions('/session', 'POST');
 
   return new Promise((resolve, reject) => {
     const req = request(options, res => {
@@ -91,20 +103,7 @@ async function augustValidateSession(session: AugustSession, log: Logger) {
     }),
   );
 
-  const options = {
-    hostname: 'api-production.august.com',
-    port: 443,
-    path: `/validation/${session.idType}`,
-    method: 'POST',
-    headers: {
-      'x-august-api-key': '7cab4bbd-2693-4fc1-b99b-dec0fb20f9d4',
-      'x-kease-api-key': '7cab4bbd-2693-4fc1-b99b-dec0fb20f9d4',
-      'Content-Type': 'application/json',
-      'Accept-Version': '0.0.1',
-      'User-Agent': 'August/Luna-3.2.2',
-      'x-august-access-token': session.token,
-    },
-  };
+  const options = addToken(getRequestOptions(`/validation/${session.idType}`, 'POST'), session.token);
 
   return new Promise((resolve, reject) => {
     const req = request(options, res => {
@@ -134,20 +133,7 @@ async function augustValidateCode(code: string, session: AugustSession, log: Log
 
   const data = new TextEncoder().encode(JSON.stringify(payload));
 
-  const options = {
-    hostname: 'api-production.august.com',
-    port: 443,
-    path: `/validate/${session.idType}`,
-    method: 'POST',
-    headers: {
-      'x-august-api-key': '7cab4bbd-2693-4fc1-b99b-dec0fb20f9d4',
-      'x-kease-api-key': '7cab4bbd-2693-4fc1-b99b-dec0fb20f9d4',
-      'Content-Type': 'application/json',
-      'Accept-Version': '0.0.1',
-      'User-Agent': 'August/Luna-3.2.2',
-      'x-august-access-token': session.token,
-    },
-  };
+  const options = addToken(getRequestOptions(`/validate/${session.idType}`, 'POST'), session.token);
 
   new Promise((resolve, reject) => {
     const req = request(options, res => {
@@ -170,21 +156,7 @@ async function augustValidateCode(code: string, session: AugustSession, log: Log
 }
 
 export async function augustGetHouses(session: AugustSession, log: Logger): Promise<AugustHome[]> {
-  const options = {
-    hostname: 'api-production.august.com',
-    port: 443,
-    path: '/users/houses/mine',
-    method: 'GET',
-    headers: {
-      'x-august-api-key': '7cab4bbd-2693-4fc1-b99b-dec0fb20f9d4',
-      'x-kease-api-key': '7cab4bbd-2693-4fc1-b99b-dec0fb20f9d4',
-      'Content-Type': 'application/json',
-      'Accept-Version': '0.0.1',
-      'User-Agent': 'August/Luna-3.2.2',
-      'Content-Length': 0,
-      'x-august-access-token': session.token,
-    },
-  };
+  const options = addToken(getRequestOptions('/users/houses/mine', 'GET'), session.token);
 
   return new Promise((resolve, reject) => {
     const req = request(options, res => {

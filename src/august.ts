@@ -7,6 +7,14 @@ export type AugustHome = {
   name: string;
 };
 
+export type AugustLock = {
+  id: string;
+  name: string;
+  macAddress: string;
+  houseId: string;
+  houseName: string;
+};
+
 export type AugustSession = {
   idType: string;
   identifier: string;
@@ -24,7 +32,7 @@ export type AugustSessionOptions = {
 export async function augustStartSession(options: AugustSessionOptions, log: Logger): Promise<AugustSession> {
   const { uuid, code } = options;
   const session = await augustLogin(uuid, 'phone', '+14058319107', 'S00n3rs!', log);
-  log.info(JSON.stringify(session));
+  log.debug(JSON.stringify(session));
 
   if (code === undefined || code.length === 0) {
     augustValidateSession(session, log);
@@ -75,7 +83,7 @@ async function augustLogin(uuid: string, idType: string, identifier: string, pas
       log.info(`statusCode: ${res.statusCode}`);
 
       res.on('data', d => {
-        process.stdout.write(d);
+        log.debug((d as Buffer).toString('utf-8'));
         const token = res.headers['x-august-access-token'] as string;
         log.debug(token);
         resolve({
@@ -110,7 +118,7 @@ async function augustValidateSession(session: AugustSession, log: Logger) {
       log.info(`statusCode: ${res.statusCode}`);
 
       res.on('data', d => {
-        process.stdout.write(d);
+        log.debug((d as Buffer).toString('utf-8'));
         resolve(null);
       });
     });
@@ -140,7 +148,7 @@ async function augustValidateCode(code: string, session: AugustSession, log: Log
       log.info(`statusCode: ${res.statusCode}`);
 
       res.on('data', d => {
-        process.stdout.write(d);
+        log.debug((d as Buffer).toString('utf-8'));
         resolve(null);
       });
     });
@@ -163,7 +171,7 @@ export async function augustGetHouses(session: AugustSession, log: Logger): Prom
       log.info(`statusCode: ${res.statusCode}`);
 
       res.on('data', d => {
-        process.stdout.write(d);
+        log.debug((d as Buffer).toString('utf-8'));
 
         const results = JSON.parse(d.toString());
         if (Array.isArray(results)) {
@@ -175,6 +183,40 @@ export async function augustGetHouses(session: AugustSession, log: Logger): Prom
         } else {
           resolve([]);
         }
+      });
+    });
+
+    req.on('error', error => {
+      log.error(`login error: ${error}`);
+      reject(error);
+    });
+
+    req.end();
+  });
+}
+
+export async function augustGetLocks(session: AugustSession, log: Logger): Promise<AugustLock[]> {
+  const options = addToken(getRequestOptions('/users/locks/mine', 'GET'), session.token);
+
+  return new Promise((resolve, reject) => {
+    const req = request(options, res => {
+      log.info(`statusCode: ${res.statusCode}`);
+
+      res.on('data', d => {
+        log.debug((d as Buffer).toString('utf-8'));
+
+        const results = JSON.parse(d.toString());
+        const locks: AugustLock[] = Object.keys(results).map(id => {
+          const lock: object = results[id];
+          return {
+            id: id,
+            name: lock['LockName'],
+            macAddress: lock['macAddress'],
+            houseId: lock['HouseID'],
+            houseName: lock['HouseName'],
+          };
+        });
+        resolve(locks);
       });
     });
 

@@ -1,13 +1,14 @@
 import { Service, PlatformAccessory, CharacteristicValue } from 'homebridge';
+import { augustGetLockStatus, AugustLockStatus } from './august';
 
-import { ExampleHomebridgePlatform } from './platform';
+import { AugustSmartLockPlatform } from './platform';
 
 /**
  * Platform Accessory
  * An instance of this class is created for each accessory your platform registers
  * Each accessory may expose multiple services of different service types.
  */
-export class ExamplePlatformAccessory {
+export class AugustSmartLockAccessory {
   private service: Service;
 
   /**
@@ -20,7 +21,7 @@ export class ExamplePlatformAccessory {
   };
 
   constructor(
-    private readonly platform: ExampleHomebridgePlatform,
+    private readonly platform: AugustSmartLockPlatform,
     private readonly accessory: PlatformAccessory,
   ) {
 
@@ -30,25 +31,21 @@ export class ExamplePlatformAccessory {
       .setCharacteristic(this.platform.Characteristic.Model, 'Default-Model')
       .setCharacteristic(this.platform.Characteristic.SerialNumber, 'Default-Serial');
 
-    // get the LightBulb service if it exists, otherwise create a new LightBulb service
+    // get the LockMechanism service if it exists, otherwise create a new LockMechanism service
     // you can create multiple services for each accessory
-    this.service = this.accessory.getService(this.platform.Service.Lightbulb) || this.accessory.addService(this.platform.Service.Lightbulb);
+    const serviceType = this.platform.Service.LockMechanism;
+    this.service = this.accessory.getService(serviceType) || this.accessory.addService(serviceType);
 
     // set the service name, this is what is displayed as the default name on the Home app
     // in this example we are using the name we stored in the `accessory.context` in the `discoverDevices` method.
     this.service.setCharacteristic(this.platform.Characteristic.Name, accessory.context.device.name);
 
     // each service must implement at-minimum the "required characteristics" for the given service type
-    // see https://developers.homebridge.io/#/service/Lightbulb
+    // see https://developers.homebridge.io/#/service/LockMechanism
 
     // register handlers for the On/Off Characteristic
-    this.service.getCharacteristic(this.platform.Characteristic.On)
-      .onSet(this.setOn.bind(this))                // SET - bind to the `setOn` method below
+    this.service.getCharacteristic(this.platform.Characteristic.LockCurrentState)
       .onGet(this.getOn.bind(this));               // GET - bind to the `getOn` method below
-
-    // register handlers for the Brightness Characteristic
-    this.service.getCharacteristic(this.platform.Characteristic.Brightness)
-      .onSet(this.setBrightness.bind(this));       // SET - bind to the 'setBrightness` method below
 
     /**
      * Creating multiple services of the same type.
@@ -116,15 +113,21 @@ export class ExamplePlatformAccessory {
    * this.service.updateCharacteristic(this.platform.Characteristic.On, true)
    */
   async getOn(): Promise<CharacteristicValue> {
-    // implement your own code to check if the device is on
-    const isOn = this.exampleStates.On;
+    if (this.platform.Session) {
+      const id = this.accessory.context.device['id'];
+      const status = await augustGetLockStatus(this.platform.Session, id, this.platform.log);
 
-    this.platform.log.debug('Get Characteristic On ->', isOn);
+      this.platform.log.debug('Get Lock Status ->', status);
 
-    // if you need to return an error to show the device as "Not Responding" in the Home app:
-    // throw new this.platform.api.hap.HapStatusError(this.platform.api.hap.HAPStatus.SERVICE_COMMUNICATION_FAILURE);
+      // if you need to return an error to show the device as "Not Responding" in the Home app:
+      // throw new this.platform.api.hap.HapStatusError(this.platform.api.hap.HAPStatus.SERVICE_COMMUNICATION_FAILURE);
 
-    return isOn;
+      return status === AugustLockStatus.LOCKED
+        ? this.platform.Characteristic.LockCurrentState.SECURED
+        : this.platform.Characteristic.LockCurrentState.UNSECURED;
+    } else {
+      return false;
+    }
   }
 
   /**

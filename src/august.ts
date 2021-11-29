@@ -15,6 +15,10 @@ export type AugustLock = {
   houseName: string;
 };
 
+export enum AugustLockStatus {
+  LOCKED, UNLOCKED
+}
+
 export type AugustSession = {
   idType: string;
   identifier: string;
@@ -217,6 +221,31 @@ export async function augustGetLocks(session: AugustSession, log: Logger): Promi
           };
         });
         resolve(locks);
+      });
+    });
+
+    req.on('error', error => {
+      log.error(`login error: ${error}`);
+      reject(error);
+    });
+
+    req.end();
+  });
+}
+
+export async function augustGetLockStatus(session: AugustSession, lockId: string, log: Logger): Promise<AugustLockStatus> {
+  const options = addToken(getRequestOptions(`/remoteoperate/${lockId}/status`, 'PUT'), session.token);
+
+  return new Promise((resolve, reject) => {
+    const req = request(options, res => {
+      log.info(`statusCode: ${res.statusCode}`);
+
+      res.on('data', d => {
+        log.debug((d as Buffer).toString('utf-8'));
+
+        const results = JSON.parse(d.toString());
+        const status = results['status'] === 'kAugLockState_Locked' ? AugustLockStatus.LOCKED : AugustLockStatus.UNLOCKED;
+        resolve(status);
       });
     });
 

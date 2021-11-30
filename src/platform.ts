@@ -3,7 +3,6 @@ import { API, DynamicPlatformPlugin, Logger, PlatformAccessory, PlatformConfig, 
 import { PLATFORM_NAME, PLUGIN_NAME } from './settings';
 import { AugustSmartLockAccessory } from './platformAccessory';
 import { AugustSessionOptions, augustStartSession, augustGetLocks, AugustSession } from './august';
-import { randomUUID } from 'crypto';
 
 /**
  * HomebridgePlatform

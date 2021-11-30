@@ -89,7 +89,6 @@ async function augustLogin(uuid: string, idType: string, identifier: string, pas
       res.on('data', d => {
         log.debug((d as Buffer).toString('utf-8'));
         const token = res.headers['x-august-access-token'] as string;
-        log.debug(token);
         resolve({
           idType: idType,
           identifier: identifier,

@@ -48,24 +48,6 @@ export class AugustSmartLockAccessory {
       .onGet(this.getOn.bind(this));               // GET - bind to the `getOn` method below
 
     /**
-     * Creating multiple services of the same type.
-     *
-     * To avoid "Cannot add a Service with the same UUID another Service without also defining a unique 'subtype' property." error,
-     * when creating multiple services of the same type, you need to use the following syntax to specify a name and subtype id:
-     * this.accessory.getService('NAME') || this.accessory.addService(this.platform.Service.Lightbulb, 'NAME', 'USER_DEFINED_SUBTYPE_ID');
-     *
-     * The USER_DEFINED_SUBTYPE must be unique to the platform accessory (if you platform exposes multiple accessories, each accessory
-     * can use the same sub type id.)
-     */
-
-    // Example: add two "motion sensor" services to the accessory
-    const motionSensorOneService = this.accessory.getService('Motion Sensor One Name') ||
-      this.accessory.addService(this.platform.Service.MotionSensor, 'Motion Sensor One Name', 'YourUniqueIdentifier-1');
-
-    const motionSensorTwoService = this.accessory.getService('Motion Sensor Two Name') ||
-      this.accessory.addService(this.platform.Service.MotionSensor, 'Motion Sensor Two Name', 'YourUniqueIdentifier-2');
-
-    /**
      * Updating characteristics values asynchronously.
      *
      * Example showing how to update the state of a Characteristic asynchronously instead
@@ -74,17 +56,22 @@ export class AugustSmartLockAccessory {
      * the `updateCharacteristic` method.
      *
      */
-    let motionDetected = false;
     setInterval(() => {
-      // EXAMPLE - inverse the trigger
-      motionDetected = !motionDetected;
+      if (this.platform.Session) {
+        const id = this.accessory.context.device['id'];
+        augustGetLockStatus(this.platform.Session, id, this.platform.log).then(status => {
+          this.platform.log.debug('Get Lock Status ->', status);
 
-      // push the new value to HomeKit
-      motionSensorOneService.updateCharacteristic(this.platform.Characteristic.MotionDetected, motionDetected);
-      motionSensorTwoService.updateCharacteristic(this.platform.Characteristic.MotionDetected, !motionDetected);
+          // if you need to return an error to show the device as "Not Responding" in the Home app:
+          // throw new this.platform.api.hap.HapStatusError(this.platform.api.hap.HAPStatus.SERVICE_COMMUNICATION_FAILURE);
 
-      this.platform.log.debug('Triggering motionSensorOneService:', motionDetected);
-      this.platform.log.debug('Triggering motionSensorTwoService:', !motionDetected);
+          const currentState = status === AugustLockStatus.LOCKED
+            ? this.platform.Characteristic.LockCurrentState.SECURED
+            : this.platform.Characteristic.LockCurrentState.UNSECURED;
+
+          this.service.updateCharacteristic(this.platform.Characteristic.LockCurrentState, currentState);
+        });
+      }
     }, 10000);
   }
 

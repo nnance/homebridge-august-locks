@@ -1,5 +1,5 @@
 import { Logger } from 'homebridge';
-import { request } from 'https';
+import { request, RequestOptions } from 'https';
 import { TextEncoder } from 'util';
 
 export type AugustHome = {
@@ -47,7 +47,7 @@ export async function augustStartSession(options: AugustSessionOptions, log: Log
   return session;
 }
 
-function getRequestOptions(path: string, method: string): object {
+function getRequestOptions(path: string, method: string): RequestOptions {
   return {
     hostname: 'api-production.august.com',
     port: 443,
@@ -63,12 +63,51 @@ function getRequestOptions(path: string, method: string): object {
   };
 }
 
-function addToken(options: object, token:string): object {
+function addToken(options: RequestOptions, token:string): RequestOptions {
   const newOptions = {
     ...options,
   };
-  newOptions['headers']['x-august-access-token'] = token;
+
+  if (newOptions['headers']) {
+    newOptions['headers']['x-august-access-token'] = token;
+  }
+
   return newOptions;
+}
+
+type AugustResponse = {
+  token: string;
+  status?: number;
+  payload: object;
+};
+
+async function makeRequest(options: RequestOptions, data: Uint8Array, log: Logger): Promise<AugustResponse> {
+  return new Promise((resolve, reject) => {
+    const req = request(options, res => {
+      log.info(`statusCode: ${res.statusCode}`);
+
+      res.on('data', d => {
+        log.debug(`statusCode: ${res.statusCode}`);
+
+        const buff = d as Buffer;
+        log.debug(buff.toString('utf-8'));
+
+        resolve({
+          status: res.statusCode,
+          token: res.headers['x-august-access-token'] as string,
+          payload: JSON.parse(buff.toString()),
+        });
+      });
+    });
+
+    req.on('error', error => {
+      log.error(`login error: ${error}`);
+      reject(error);
+    });
+
+    req.write(data);
+    req.end();
+  });
 }
 
 async function augustLogin(uuid: string, idType: string, identifier: string, password: string, log: Logger): Promise<AugustSession> {
@@ -82,29 +121,12 @@ async function augustLogin(uuid: string, idType: string, identifier: string, pas
 
   const options = getRequestOptions('/session', 'POST');
 
-  return new Promise((resolve, reject) => {
-    const req = request(options, res => {
-      log.info(`statusCode: ${res.statusCode}`);
-
-      res.on('data', d => {
-        log.debug((d as Buffer).toString('utf-8'));
-        const token = res.headers['x-august-access-token'] as string;
-        resolve({
-          idType: idType,
-          identifier: identifier,
-          token: token,
-        });
-      });
-    });
-
-    req.on('error', error => {
-      log.error(`login error: ${error}`);
-      reject(error);
-    });
-
-    req.write(data);
-    req.end();
-  });
+  const res = await makeRequest(options, data, log);
+  return {
+    idType: idType,
+    identifier: identifier,
+    token: res.token,
+  };
 }
 
 async function augustValidateSession(session: AugustSession, log: Logger) {
@@ -116,24 +138,7 @@ async function augustValidateSession(session: AugustSession, log: Logger) {
 
   const options = addToken(getRequestOptions(`/validation/${session.idType}`, 'POST'), session.token);
 
-  return new Promise((resolve, reject) => {
-    const req = request(options, res => {
-      log.info(`statusCode: ${res.statusCode}`);
-
-      res.on('data', d => {
-        log.debug((d as Buffer).toString('utf-8'));
-        resolve(null);
-      });
-    });
-
-    req.on('error', error => {
-      log.error(`login error: ${error}`);
-      reject(error);
-    });
-
-    req.write(data);
-    req.end();
-  });
+  makeRequest(options, data, log);
 }
 
 async function augustValidateCode(code: string, session: AugustSession, log: Logger) {
@@ -146,113 +151,64 @@ async function augustValidateCode(code: string, session: AugustSession, log: Log
 
   const options = addToken(getRequestOptions(`/validate/${session.idType}`, 'POST'), session.token);
 
-  new Promise((resolve, reject) => {
-    const req = request(options, res => {
-      log.info(`statusCode: ${res.statusCode}`);
-
-      res.on('data', d => {
-        log.debug((d as Buffer).toString('utf-8'));
-        resolve(null);
-      });
-    });
-
-    req.on('error', error => {
-      log.error(`login error: ${error}`);
-      reject(error);
-    });
-
-    req.write(data);
-    req.end();
-  });
+  makeRequest(options, data, log);
 }
 
 export async function augustGetHouses(session: AugustSession, log: Logger): Promise<AugustHome[]> {
   const options = addToken(getRequestOptions('/users/houses/mine', 'GET'), session.token);
 
-  return new Promise((resolve, reject) => {
-    const req = request(options, res => {
-      log.info(`statusCode: ${res.statusCode}`);
+  const results = await makeRequest(options, new Uint8Array(), log);
 
-      res.on('data', d => {
-        log.debug((d as Buffer).toString('utf-8'));
-
-        const results = JSON.parse(d.toString());
-        if (Array.isArray(results)) {
-          const homes: AugustHome[] = (results as [object]).map(home => ({
-            id: home['HouseID'],
-            name: home['HouseName'],
-          }));
-          resolve(homes);
-        } else {
-          resolve([]);
-        }
-      });
-    });
-
-    req.on('error', error => {
-      log.error(`login error: ${error}`);
-      reject(error);
-    });
-
-    req.end();
-  });
+  if (Array.isArray(results.payload)) {
+    const homes: AugustHome[] = (results.payload).map(home => ({
+      id: home['HouseID'],
+      name: home['HouseName'],
+    }));
+    return homes;
+  } else {
+    return [];
+  }
 }
 
 export async function augustGetLocks(session: AugustSession, log: Logger): Promise<AugustLock[]> {
   const options = addToken(getRequestOptions('/users/locks/mine', 'GET'), session.token);
 
-  return new Promise((resolve, reject) => {
-    const req = request(options, res => {
-      log.info(`statusCode: ${res.statusCode}`);
+  const results = await makeRequest(options, new Uint8Array(), log);
 
-      res.on('data', d => {
-        log.debug((d as Buffer).toString('utf-8'));
-
-        const results = JSON.parse(d.toString());
-        const locks: AugustLock[] = Object.keys(results).map(id => {
-          const lock: object = results[id];
-          return {
-            id: id,
-            name: lock['LockName'],
-            macAddress: lock['macAddress'],
-            houseId: lock['HouseID'],
-            houseName: lock['HouseName'],
-          };
-        });
-        resolve(locks);
-      });
+  if (results.payload) {
+    const locks: AugustLock[] = Object.keys(results.payload).map(id => {
+      const lock: object = results.payload![id];
+      return {
+        id: id,
+        name: lock['LockName'],
+        macAddress: lock['macAddress'],
+        houseId: lock['HouseID'],
+        houseName: lock['HouseName'],
+      };
     });
-
-    req.on('error', error => {
-      log.error(`login error: ${error}`);
-      reject(error);
-    });
-
-    req.end();
-  });
+    return locks;
+  } else {
+    return [];
+  }
 }
 
 export async function augustGetLockStatus(session: AugustSession, lockId: string, log: Logger): Promise<AugustLockStatus> {
   const options = addToken(getRequestOptions(`/remoteoperate/${lockId}/status`, 'PUT'), session.token);
 
-  return new Promise((resolve, reject) => {
-    const req = request(options, res => {
-      log.info(`statusCode: ${res.statusCode}`);
+  const results = await makeRequest(options, new Uint8Array(), log);
+  return results.payload['status'] === 'kAugLockState_Locked' ? AugustLockStatus.LOCKED : AugustLockStatus.UNLOCKED;
+}
 
-      res.on('data', d => {
-        log.debug((d as Buffer).toString('utf-8'));
+export async function augustSetStatus(
+  session: AugustSession,
+  lockId: string,
+  status: AugustLockStatus,
+  log: Logger,
+): Promise<AugustLockStatus> {
+  const url = status === AugustLockStatus.LOCKED ? `/remoteoperate/${lockId}/lock` : `/remoteoperate/${lockId}/unlock`;
+  const options = addToken(getRequestOptions(url, 'PUT'), session.token);
 
-        const results = JSON.parse(d.toString());
-        const status = results['status'] === 'kAugLockState_Locked' ? AugustLockStatus.LOCKED : AugustLockStatus.UNLOCKED;
-        resolve(status);
-      });
-    });
-
-    req.on('error', error => {
-      log.error(`login error: ${error}`);
-      reject(error);
-    });
-
-    req.end();
-  });
+  const results = await makeRequest(options, new Uint8Array(), log);
+  const update = results.payload['status'] === 'kAugLockState_Locked' ? AugustLockStatus.LOCKED : AugustLockStatus.UNLOCKED;
+  return update;
 }

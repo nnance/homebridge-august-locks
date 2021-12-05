@@ -1,5 +1,5 @@
 import { Service, PlatformAccessory, CharacteristicValue } from 'homebridge';
-import { augustGetLockStatus, AugustLockStatus } from './august';
+import { augustGetLockStatus, AugustLockStatus, augustSetStatus } from './august';
 
 import { AugustSmartLockPlatform } from './platform';
 
@@ -10,15 +10,6 @@ import { AugustSmartLockPlatform } from './platform';
  */
 export class AugustSmartLockAccessory {
   private service: Service;
-
-  /**
-   * These are just used to create a working example
-   * You should implement your own code to track the state of your accessory
-   */
-  private exampleStates = {
-    On: false,
-    Brightness: 100,
-  };
 
   constructor(
     private readonly platform: AugustSmartLockPlatform,
@@ -47,6 +38,9 @@ export class AugustSmartLockAccessory {
     this.service.getCharacteristic(this.platform.Characteristic.LockCurrentState)
       .onGet(this.getOn.bind(this));               // GET - bind to the `getOn` method below
 
+    this.service.getCharacteristic(this.platform.Characteristic.LockTargetState)
+      .onGet(this.getOn.bind(this))
+      .onSet(this.setOn.bind(this));
     /**
      * Updating characteristics values asynchronously.
      *
@@ -80,10 +74,11 @@ export class AugustSmartLockAccessory {
    * These are sent when the user changes the state of an accessory, for example, turning on a Light bulb.
    */
   async setOn(value: CharacteristicValue) {
-    // implement your own code to turn your device on/off
-    this.exampleStates.On = value as boolean;
-
-    this.platform.log.debug('Set Characteristic On ->', value);
+    const id = this.accessory.context.device['id'];
+    if (this.platform.Session) {
+      const status = value === this.platform.Characteristic.LockCurrentState.SECURED ? AugustLockStatus.LOCKED : AugustLockStatus.UNLOCKED;
+      augustSetStatus(this.platform.Session, id, status, this.platform.log);
+    }
   }
 
   /**
@@ -116,16 +111,4 @@ export class AugustSmartLockAccessory {
       return false;
     }
   }
-
-  /**
-   * Handle "SET" requests from HomeKit
-   * These are sent when the user changes the state of an accessory, for example, changing the Brightness
-   */
-  async setBrightness(value: CharacteristicValue) {
-    // implement your own code to set the brightness
-    this.exampleStates.Brightness = value as number;
-
-    this.platform.log.debug('Set Characteristic Brightness -> ', value);
-  }
-
 }

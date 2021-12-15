@@ -40,6 +40,11 @@
 				"title": "Installation ID",
 				"type": "string",
 				"required": true
+			},
+			"refreshInterval": {
+				"title": "Refresh Interval (seconds)",
+				"type": "number",
+				"required": false
 			}
     }
   }

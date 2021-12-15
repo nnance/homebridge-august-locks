@@ -62,12 +62,18 @@ export class AugustSmartLockPlatform implements DynamicPlatformPlugin {
     };
 
     const session = await augustStartSession(options, this.log);
-    const locks = await augustGetLocks(session, this.log);
     this.Session = session;
+
+    const locks = await augustGetLocks(session, this.log);
     this.log.debug(JSON.stringify(locks));
 
+    // filter out locks that are not in the config
+    const filteredLocks = this.config['filter']
+      ? locks.filter(lock => !lock.id.toLowerCase().includes(this.config['filter'].toLowerCase()))
+      : locks;
+
     // loop over the discovered devices and register each one if it has not already been registered
-    for (const lock of locks) {
+    for (const lock of filteredLocks) {
 
       // generate a unique id for the accessory this should be generated from
       // something globally unique, but constant, for example, the device serial

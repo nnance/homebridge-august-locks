@@ -53,17 +53,18 @@ export class AugustSmartLockAccessory {
     setInterval(async () => {
       if (this.platform.Session) {
         const id = this.accessory.context.device['id'];
-        const status = await augustGetLockStatus(this.platform.Session, id, this.platform.log);
-        this.platform.log.debug('Get Lock Status ->', status);
+        augustGetLockStatus(this.platform.Session, id, this.platform.log).then((status) => {
+          this.platform.log.debug('Get Lock Status ->', status);
 
-        // if you need to return an error to show the device as "Not Responding" in the Home app:
-        // throw new this.platform.api.hap.HapStatusError(this.platform.api.hap.HAPStatus.SERVICE_COMMUNICATION_FAILURE);
+          // if you need to return an error to show the device as "Not Responding" in the Home app:
+          // throw new this.platform.api.hap.HapStatusError(this.platform.api.hap.HAPStatus.SERVICE_COMMUNICATION_FAILURE);
 
-        const currentState = status === AugustLockStatus.LOCKED
-          ? this.platform.Characteristic.LockCurrentState.SECURED
-          : this.platform.Characteristic.LockCurrentState.UNSECURED;
+          const currentState = status === AugustLockStatus.LOCKED
+            ? this.platform.Characteristic.LockCurrentState.SECURED
+            : this.platform.Characteristic.LockCurrentState.UNSECURED;
 
-        this.service.updateCharacteristic(this.platform.Characteristic.LockCurrentState, currentState);
+          this.service.updateCharacteristic(this.platform.Characteristic.LockCurrentState, currentState);
+        });
       }
     }, (this.platform.config['refreshInterval'] || 10) * 1000);
   }
@@ -76,7 +77,12 @@ export class AugustSmartLockAccessory {
     const id = this.accessory.context.device['id'];
     if (this.platform.Session) {
       const status = value === this.platform.Characteristic.LockCurrentState.SECURED ? AugustLockStatus.LOCKED : AugustLockStatus.UNLOCKED;
-      augustSetStatus(this.platform.Session, id, status, this.platform.log);
+      try {
+        augustSetStatus(this.platform.Session, id, status, this.platform.log);
+      } catch (error) {
+        this.platform.log.error('Set Lock Status ->', error);
+        throw new this.platform.api.hap.HapStatusError(this.platform.api.hap.HAPStatus.SERVICE_COMMUNICATION_FAILURE);
+      }
     }
   }
 
@@ -99,8 +105,7 @@ export class AugustSmartLockAccessory {
       setImmediate((async () => {
         const id = this.accessory.context.device['id'];
 
-        try {
-          const status = await augustGetLockStatus(this.platform.Session!, id, this.platform.log);
+        augustGetLockStatus(this.platform.Session!, id, this.platform.log).then((status) => {
 
           this.platform.log.debug('Get Lock Status ->', status);
 
@@ -112,11 +117,10 @@ export class AugustSmartLockAccessory {
             : this.platform.Characteristic.LockCurrentState.UNSECURED;
 
           this.service.updateCharacteristic(this.platform.Characteristic.LockCurrentState, currentState);
-
-        } catch (error) {
+        }).catch((error) => {
           this.platform.log.error('Get Lock Status ->', error);
           throw new this.platform.api.hap.HapStatusError(this.platform.api.hap.HAPStatus.SERVICE_COMMUNICATION_FAILURE);
-        }
+        });
       }));
       return this.service.getCharacteristic(this.platform.Characteristic.LockCurrentState).value || false;
     } else {

@@ -1,16 +1,16 @@
 {
   "private": true,
   "displayName": "Homebridge August Smart Locks",
-  "name": "homebridge-august-ts",
+  "name": "homebridge-august-locks",
   "version": "1.0.0",
   "description": "Homebridge Plugin for August Smart Locks.",
   "license": "Apache-2.0",
   "repository": {
     "type": "git",
-    "url": "https://github.com/nnance/homebridge-august-ts.git"
+    "url": "https://github.com/nnance/homebridge-august-locks.git"
   },
   "bugs": {
-    "url": "https://github.com/nnance/homebridge-august-ts.git/issues"
+    "url": "https://github.com/nnance/homebridge-august-locks.git/issues"
   },
   "engines": {
     "node": ">=14.18.1",

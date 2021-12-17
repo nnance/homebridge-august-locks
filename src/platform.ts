@@ -2,7 +2,7 @@ import { API, DynamicPlatformPlugin, Logger, PlatformAccessory, PlatformConfig, 
 
 import { PLATFORM_NAME, PLUGIN_NAME } from './settings';
 import { AugustSmartLockAccessory } from './platformAccessory';
-import { AugustSessionOptions, augustStartSession, augustGetLocks, AugustSession } from './august';
+import { AugustSessionOptions, augustStartSession, augustGetLocks, AugustSession, AugustLock } from './august';
 
 /**
  * HomebridgePlatform
@@ -61,19 +61,30 @@ export class AugustSmartLockPlatform implements DynamicPlatformPlugin {
       code: this.config['code'],
     };
 
-    const session = await augustStartSession(options, this.log);
-    this.Session = session;
+    augustStartSession(options, this.log).then(session => {
+      this.Session = session;
 
-    const locks = await augustGetLocks(session, this.log);
-    this.log.debug(JSON.stringify(locks));
+      augustGetLocks(session, this.log).then(locks => {
+        this.log.debug(JSON.stringify(locks));
 
-    // filter out locks that are not in the config
-    const filteredLocks = this.config['filter']
-      ? locks.filter(lock => !lock.id.toLowerCase().includes(this.config['filter'].toLowerCase()))
-      : locks;
+        // filter out locks that are not in the config
+        const filteredLocks = this.config['filter']
+          ? locks.filter(lock => !lock.id.toLowerCase().includes(this.config['filter'].toLowerCase()))
+          : locks;
 
+        this.registerLocks(filteredLocks);
+
+      }).catch(() => {
+        throw new this.api.hap.HapStatusError(this.api.hap.HAPStatus.SERVICE_COMMUNICATION_FAILURE);
+      });
+    }).catch(() => {
+      throw new this.api.hap.HapStatusError(this.api.hap.HAPStatus.INSUFFICIENT_AUTHORIZATION);
+    });
+  }
+
+  registerLocks(locks: AugustLock[]) {
     // loop over the discovered devices and register each one if it has not already been registered
-    for (const lock of filteredLocks) {
+    for (const lock of locks) {
 
       // generate a unique id for the accessory this should be generated from
       // something globally unique, but constant, for example, the device serial

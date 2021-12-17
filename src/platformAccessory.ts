@@ -1,5 +1,5 @@
 import { Service, PlatformAccessory, CharacteristicValue } from 'homebridge';
-import { augustGetLockStatus, AugustLockStatus, augustSetStatus } from './august';
+import { augustGetLockStatus, AugustLock, AugustLockStatus, augustSetStatus } from './august';
 
 import { AugustSmartLockPlatform } from './platform';
 
@@ -17,10 +17,12 @@ export class AugustSmartLockAccessory {
   ) {
 
     // set accessory information
+    const lock: AugustLock = accessory.context.device;
+
     this.accessory.getService(this.platform.Service.AccessoryInformation)!
-      .setCharacteristic(this.platform.Characteristic.Manufacturer, 'Default-Manufacturer')
-      .setCharacteristic(this.platform.Characteristic.Model, 'Default-Model')
-      .setCharacteristic(this.platform.Characteristic.SerialNumber, 'Default-Serial');
+      .setCharacteristic(this.platform.Characteristic.Manufacturer, 'August')
+      .setCharacteristic(this.platform.Characteristic.Model, 'AUG-SL05-M01-S0')
+      .setCharacteristic(this.platform.Characteristic.SerialNumber, lock.id);
 
     // get the LockMechanism service if it exists, otherwise create a new LockMechanism service
     // you can create multiple services for each accessory

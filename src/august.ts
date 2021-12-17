@@ -101,7 +101,7 @@ async function makeRequest(options: RequestOptions, data: Uint8Array, log: Logge
     });
 
     req.on('error', error => {
-      log.error(`login error: ${error}`);
+      log.error(`request error: ${error}`);
       reject(error);
     });
 

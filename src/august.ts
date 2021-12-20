@@ -159,7 +159,7 @@ export async function augustGetHouses(session: AugustSession, log: Logger): Prom
 
   const results = await makeRequest(options, new Uint8Array(), log);
 
-  if (Array.isArray(results.payload)) {
+  if (results.status === 200 && Array.isArray(results.payload)) {
     const homes: AugustHome[] = (results.payload).map(home => ({
       id: home['HouseID'],
       name: home['HouseName'],
@@ -175,7 +175,7 @@ export async function augustGetLocks(session: AugustSession, log: Logger): Promi
 
   const results = await makeRequest(options, new Uint8Array(), log);
 
-  if (results.payload) {
+  if (results.status === 200 && results.payload) {
     const locks: AugustLock[] = Object.keys(results.payload).map(id => {
       const lock: object = results.payload![id];
       return {

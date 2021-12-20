@@ -34,8 +34,8 @@ export type AugustSessionOptions = {
 };
 
 export async function augustStartSession(options: AugustSessionOptions, log: Logger): Promise<AugustSession> {
-  const { uuid, code } = options;
-  const session = await augustLogin(uuid, 'phone', '+14058319107', 'S00n3rs!', log);
+  const { uuid, code, idType, password, identifier } = options;
+  const session = await augustLogin(uuid, idType, identifier, password, log);
   log.debug(JSON.stringify(session));
 
   if (code === undefined || code.length === 0) {

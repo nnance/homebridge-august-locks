@@ -10,6 +10,7 @@ import { AugustSmartLockPlatform } from './platform';
  */
 export class AugustSmartLockAccessory {
   private service: Service;
+  private locked = AugustLockStatus.LOCKED;
 
   constructor(
     private readonly platform: AugustSmartLockPlatform,
@@ -21,7 +22,7 @@ export class AugustSmartLockAccessory {
     // set accessory information
     this.accessory.getService(this.platform.Service.AccessoryInformation)!
       .setCharacteristic(this.platform.Characteristic.Manufacturer, 'August')
-      .setCharacteristic(this.platform.Characteristic.Model, 'AUG-SL05-M01-S0')
+      .setCharacteristic(this.platform.Characteristic.Model, 'Wifi Lock')
       .setCharacteristic(this.platform.Characteristic.SerialNumber, lock.id);
 
     // get the LockMechanism service if it exists, otherwise create a new LockMechanism service
@@ -38,7 +39,7 @@ export class AugustSmartLockAccessory {
 
     // register handlers for the On/Off Characteristic
     this.service.getCharacteristic(this.platform.Characteristic.LockCurrentState)
-      .onGet(this.getOnCurrentState.bind(this));               // GET - bind to the `getOn` method below
+      .onGet(this.getOn.bind(this));               // GET - bind to the `getOn` method below
 
     this.service.getCharacteristic(this.platform.Characteristic.LockTargetState)
       .onGet(this.getOn.bind(this))
@@ -53,23 +54,25 @@ export class AugustSmartLockAccessory {
      * the `updateCharacteristic` method.
      *
      */
-    setInterval(async () => {
-      if (this.platform.Session) {
-        const id = this.accessory.context.device['id'];
-        augustGetLockStatus(this.platform.Session, id, this.platform.log).then((status) => {
-          this.platform.log.debug('Get Lock Status ->', status);
+    setInterval(this.updateStatus.bind(this), (this.platform.config['refreshInterval'] || 10) * 1000);
+  }
 
-          // if you need to return an error to show the device as "Not Responding" in the Home app:
-          // throw new this.platform.api.hap.HapStatusError(this.platform.api.hap.HAPStatus.SERVICE_COMMUNICATION_FAILURE);
+  /**
+   * Mock handlers for testing
+   **/
 
-          const currentState = status === AugustLockStatus.LOCKED
-            ? this.platform.Characteristic.LockCurrentState.SECURED
-            : this.platform.Characteristic.LockCurrentState.UNSECURED;
+  async setMock(value: CharacteristicValue) {
+    this.platform.log.debug(`Set State (${this.accessory.context.device['name']}) ->`, value.valueOf());
+    this.locked = value === this.platform.Characteristic.LockTargetState.SECURED ? AugustLockStatus.LOCKED : AugustLockStatus.UNLOCKED;
+  }
 
-          this.service.updateCharacteristic(this.platform.Characteristic.LockCurrentState, currentState);
-        });
-      }
-    }, (this.platform.config['refreshInterval'] || 10) * 1000);
+  async getMock(): Promise<CharacteristicValue>{
+    const results = this.locked === AugustLockStatus.LOCKED
+      ? this.platform.Characteristic.LockCurrentState.SECURED
+      : this.platform.Characteristic.LockCurrentState.UNSECURED;
+
+    this.platform.log.debug(`Get State (${this.accessory.context.device['name']}) ->`, results);
+    return results;
   }
 
   /**
@@ -81,9 +84,10 @@ export class AugustSmartLockAccessory {
     if (this.platform.Session) {
       const status = value === this.platform.Characteristic.LockTargetState.SECURED ? AugustLockStatus.LOCKED : AugustLockStatus.UNLOCKED;
       try {
+        this.platform.log.debug('Set Lock State ->', status);
         augustSetStatus(this.platform.Session, id, status, this.platform.log);
       } catch (error) {
-        this.platform.log.error('Set Lock Status ->', error);
+        this.platform.log.error('Set Lock State ->', error);
         throw new this.platform.api.hap.HapStatusError(this.platform.api.hap.HAPStatus.SERVICE_COMMUNICATION_FAILURE);
       }
     }
@@ -102,63 +106,31 @@ export class AugustSmartLockAccessory {
    * @example
    * this.service.updateCharacteristic(this.platform.Characteristic.On, true)
    */
-  async getOnCurrentState(): Promise<CharacteristicValue> {
-    if (this.platform.Session) {
-      // run status update in the background to avoid blocking the main thread
-      setImmediate((async () => {
-        const id = this.accessory.context.device['id'];
-
-        augustGetLockStatus(this.platform.Session!, id, this.platform.log).then((status) => {
-
-          this.platform.log.debug('Get Lock Status ->', status);
-
-          // if you need to return an error to show the device as "Not Responding" in the Home app:
-          // throw new this.platform.api.hap.HapStatusError(this.platform.api.hap.HAPStatus.SERVICE_COMMUNICATION_FAILURE);
-
-          const currentState = status === AugustLockStatus.LOCKED
-            ? this.platform.Characteristic.LockCurrentState.SECURED
-            : this.platform.Characteristic.LockCurrentState.UNSECURED;
-
-          this.service.updateCharacteristic(this.platform.Characteristic.LockCurrentState, currentState);
-        }).catch((error) => {
-          this.platform.log.error('Get Lock Status ->', error);
-          throw new this.platform.api.hap.HapStatusError(this.platform.api.hap.HAPStatus.SERVICE_COMMUNICATION_FAILURE);
-        });
-      }));
-      return this.service.getCharacteristic(this.platform.Characteristic.LockCurrentState).value
-        || this.platform.Characteristic.LockCurrentState.UNSECURED;
-    } else {
-      return this.platform.Characteristic.LockCurrentState.UNSECURED;
-    }
+  async getOn(): Promise<CharacteristicValue> {
+    // run status update in the background to avoid blocking the main thread
+    setImmediate(this.updateStatus.bind(this));
+    return this.service.getCharacteristic(this.platform.Characteristic.LockCurrentState).value
+      || this.platform.Characteristic.LockCurrentState.UNSECURED;
   }
 
-  async getOn(): Promise<CharacteristicValue> {
-    if (this.platform.Session) {
-      // run status update in the background to avoid blocking the main thread
-      setImmediate((async () => {
-        const id = this.accessory.context.device['id'];
+  async updateStatus() {
+    const id = this.accessory.context.device['id'];
 
-        augustGetLockStatus(this.platform.Session!, id, this.platform.log).then((status) => {
+    augustGetLockStatus(this.platform.Session!, id, this.platform.log).then((status) => {
 
-          this.platform.log.debug('Get Lock Status ->', status);
+      this.platform.log.debug('Get Lock Status ->', status);
 
-          // if you need to return an error to show the device as "Not Responding" in the Home app:
-          // throw new this.platform.api.hap.HapStatusError(this.platform.api.hap.HAPStatus.SERVICE_COMMUNICATION_FAILURE);
+      // if you need to return an error to show the device as "Not Responding" in the Home app:
+      // throw new this.platform.api.hap.HapStatusError(this.platform.api.hap.HAPStatus.SERVICE_COMMUNICATION_FAILURE);
 
-          const currentState = status === AugustLockStatus.LOCKED
-            ? this.platform.Characteristic.LockTargetState.SECURED
-            : this.platform.Characteristic.LockTargetState.UNSECURED;
+      const currentState = status === AugustLockStatus.LOCKED
+        ? this.platform.Characteristic.LockCurrentState.SECURED
+        : this.platform.Characteristic.LockCurrentState.UNSECURED;
 
-          this.service.updateCharacteristic(this.platform.Characteristic.LockTargetState, currentState);
-        }).catch((error) => {
-          this.platform.log.error('Get Lock Status ->', error);
-          throw new this.platform.api.hap.HapStatusError(this.platform.api.hap.HAPStatus.SERVICE_COMMUNICATION_FAILURE);
-        });
-      }));
-      return this.service.getCharacteristic(this.platform.Characteristic.LockTargetState).value
-        || this.platform.Characteristic.LockTargetState.UNSECURED;
-    } else {
-      return this.platform.Characteristic.LockTargetState.UNSECURED;
-    }
+      this.service.updateCharacteristic(this.platform.Characteristic.LockCurrentState, currentState);
+    }).catch((error) => {
+      this.platform.log.error('Get Lock Status ->', error);
+      throw new this.platform.api.hap.HapStatusError(this.platform.api.hap.HAPStatus.SERVICE_COMMUNICATION_FAILURE);
+    });
   }
 }

@@ -84,8 +84,6 @@ type AugustResponse = {
 async function makeRequest(options: RequestOptions, data: Uint8Array, log: Logger): Promise<AugustResponse> {
   return new Promise((resolve, reject) => {
     const req = request(options, res => {
-      log.info(`statusCode: ${res.statusCode}`);
-
       res.on('data', d => {
         log.debug(`statusCode: ${res.statusCode}`);
 

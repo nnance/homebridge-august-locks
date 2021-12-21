@@ -10,6 +10,7 @@ import { AugustSmartLockPlatform } from './platform';
  */
 export class AugustSmartLockAccessory {
   private service: Service;
+  private batteryService: Service;
   private locked = AugustLockStatus.LOCKED;
 
   constructor(
@@ -25,36 +26,52 @@ export class AugustSmartLockAccessory {
       .setCharacteristic(this.platform.Characteristic.Model, 'Wifi Lock')
       .setCharacteristic(this.platform.Characteristic.SerialNumber, lock.id);
 
-    // get the LockMechanism service if it exists, otherwise create a new LockMechanism service
-    // you can create multiple services for each accessory
-    const serviceType = this.platform.Service.LockMechanism;
-    this.service = this.accessory.getService(serviceType) || this.accessory.addService(serviceType);
+    this.service = this.addLockService();
+    this.batteryService = this.addBatteryService();
 
     // set the service name, this is what is displayed as the default name on the Home app
     // in this example we are using the name we stored in the `accessory.context` in the `discoverDevices` method.
     this.service.setCharacteristic(this.platform.Characteristic.Name, lock.name);
-
-    // each service must implement at-minimum the "required characteristics" for the given service type
-    // see https://developers.homebridge.io/#/service/LockMechanism
-
-    // register handlers for the On/Off Characteristic
-    this.service.getCharacteristic(this.platform.Characteristic.LockCurrentState)
-      .onGet(this.getOn.bind(this));               // GET - bind to the `getOn` method below
-
-    this.service.getCharacteristic(this.platform.Characteristic.LockTargetState)
-      .onGet(this.getOn.bind(this))
-      .onSet(this.setOn.bind(this));
 
     /**
      * Updating characteristics values asynchronously.
      *
      * Example showing how to update the state of a Characteristic asynchronously instead
      * of using the `on('get')` handlers.
-     * Here we change update the motion sensor trigger states on and off every 10 seconds
+     * Here we change update the lock state trigger states on and off every 10 seconds
      * the `updateCharacteristic` method.
      *
      */
     setInterval(this.updateStatus.bind(this), (this.platform.config['refreshInterval'] || 10) * 1000);
+  }
+
+  addLockService(): Service {
+    // get the LockMechanism service if it exists, otherwise create a new LockMechanism service
+    // you can create multiple services for each accessory
+    const service = this.accessory.getService(this.platform.Service.LockMechanism)
+      || this.accessory.addService(this.platform.Service.LockMechanism);
+
+    // each service must implement at-minimum the "required characteristics" for the given service type
+    // see https://developers.homebridge.io/#/service/LockMechanism
+
+    // register handlers for the On/Off Characteristic
+    service.getCharacteristic(this.platform.Characteristic.LockCurrentState)
+      .onGet(this.getOn.bind(this));               // GET - bind to the `getOn` method below
+
+    service.getCharacteristic(this.platform.Characteristic.LockTargetState)
+      .onGet(this.getOn.bind(this))
+      .onSet(this.setOn.bind(this));
+
+    return service;
+  }
+
+  addBatteryService() {
+    // get the Battery service if it exists, otherwise create a new Battery service
+    // you can create multiple services for each accessory
+    const service = this.accessory.getService(this.platform.Service.Battery)
+      || this.accessory.addService(this.platform.Service.Battery);
+
+    return service;
   }
 
   /**

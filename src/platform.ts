@@ -124,7 +124,7 @@ export class AugustSmartLockPlatform implements DynamicPlatformPlugin {
 
         // create the accessory handler for the newly create accessory
         // this is imported from `platformAccessory.ts`
-        // new ExamplePlatformAccessory(this, accessory);
+        new AugustSmartLockAccessory(this, accessory);
 
         // link the accessory to your platform
         this.api.registerPlatformAccessories(PLUGIN_NAME, PLATFORM_NAME, [accessory]);

@@ -75,10 +75,10 @@ export class AugustSmartLockPlatform implements DynamicPlatformPlugin {
         this.registerLocks(filteredLocks);
 
       }).catch(() => {
-        throw new this.api.hap.HapStatusError(this.api.hap.HAPStatus.SERVICE_COMMUNICATION_FAILURE);
+        this.log.error('Failed to get locks');
       });
     }).catch(() => {
-      throw new this.api.hap.HapStatusError(this.api.hap.HAPStatus.INSUFFICIENT_AUTHORIZATION);
+      this.log.error('Failed to start session, check your config and confirm your password');
     });
   }
 

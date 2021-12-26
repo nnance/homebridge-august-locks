@@ -33,15 +33,33 @@ export type AugustSessionOptions = {
   code: string;  // 2FA code
 };
 
+type AugustResponse = {
+  token: string;
+  status?: number;
+  payload: object;
+};
+
 export async function augustStartSession(options: AugustSessionOptions, log: Logger): Promise<AugustSession> {
   const { uuid, code, idType, password, identifier } = options;
   const session = await augustLogin(uuid, idType, identifier, password, log);
   log.debug(JSON.stringify(session));
 
-  if (code === undefined || code.length === 0) {
-    augustValidateSession(session, log);
-  } else {
-    await augustValidateCode(code, session, log);
+  const {status} = await augustGetMe(session, log);
+
+  // Session isn't valid yet, so we need to validate it by sending a code
+  if (status !== 200) {
+    if (code === undefined || code.length === 0) {
+      await augustSendCode(session, log);
+      log.info('Session is not valid yet, but no code was provided. Please provide a code.');
+    } else {
+      const resp = await augustValidateCode(code, session, log);
+      if (resp.status !== 200) {
+        await augustSendCode(session, log);
+        log.error(`Invalid code: ${resp.status}, new code sent, please provide the new code.`);
+      } else {
+        session.token = resp.token;
+      }
+    }
   }
 
   return session;
@@ -74,12 +92,6 @@ function addToken(options: RequestOptions, token:string): RequestOptions {
 
   return newOptions;
 }
-
-type AugustResponse = {
-  token: string;
-  status?: number;
-  payload: object;
-};
 
 async function makeRequest(options: RequestOptions, data: Uint8Array, log: Logger): Promise<AugustResponse> {
   return new Promise((resolve, reject) => {
@@ -120,14 +132,24 @@ async function augustLogin(uuid: string, idType: string, identifier: string, pas
   const options = getRequestOptions('/session', 'POST');
 
   const res = await makeRequest(options, data, log);
-  return {
-    idType: idType,
-    identifier: identifier,
-    token: res.token,
-  };
+  if (res.status !== 200 || res.payload['userId'] === undefined || res.payload['userId'].length === 0) {
+    throw new Error(`Invalid user credentials: ${res.status}`);
+  } else {
+    return {
+      idType: idType,
+      identifier: identifier,
+      token: res.token,
+    };
+  }
 }
 
-async function augustValidateSession(session: AugustSession, log: Logger) {
+async function augustGetMe(session: AugustSession, log: Logger): Promise<AugustResponse> {
+  const options = addToken(getRequestOptions('/users/me', 'GET'), session.token);
+
+  return makeRequest(options, new TextEncoder().encode(''), log);
+}
+
+async function augustSendCode(session: AugustSession, log: Logger): Promise<AugustResponse> {
   const data = new TextEncoder().encode(
     JSON.stringify({
       value: session.identifier,
@@ -136,10 +158,10 @@ async function augustValidateSession(session: AugustSession, log: Logger) {
 
   const options = addToken(getRequestOptions(`/validation/${session.idType}`, 'POST'), session.token);
 
-  makeRequest(options, data, log);
+  return makeRequest(options, data, log);
 }
 
-async function augustValidateCode(code: string, session: AugustSession, log: Logger) {
+async function augustValidateCode(code: string, session: AugustSession, log: Logger): Promise<AugustResponse> {
   const payload = {
     code,
   };
@@ -149,7 +171,7 @@ async function augustValidateCode(code: string, session: AugustSession, log: Log
 
   const options = addToken(getRequestOptions(`/validate/${session.idType}`, 'POST'), session.token);
 
-  makeRequest(options, data, log);
+  return makeRequest(options, data, log);
 }
 
 export async function augustGetHouses(session: AugustSession, log: Logger): Promise<AugustHome[]> {

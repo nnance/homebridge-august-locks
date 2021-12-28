@@ -22,7 +22,7 @@
     "watch": "npm run build && npm link && nodemon",
     "build": "rimraf ./dist && tsc",
     "prepublishOnly": "npm run lint && npm run build",
-    "test:unit": "mocha -r ts-node/register src/*.spec.ts",
+    "test": "mocha -r ts-node/register src/*.spec.ts",
     "test:watch": "mocha -r ts-node/register src/*.spec.ts --watch --watch-files src/**/*.ts"
   },
   "keywords": [

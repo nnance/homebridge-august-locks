@@ -1,0 +1,29 @@
+- name: Automated Version Bump
+  # You may pin to the exact commit or the version.
+  # uses: phips28/gh-action-bump-version@92eef6faf8f8d95f75486e2b2aded91d3cfe0e0e
+  uses: phips28/gh-action-bump-version@v9.0.1
+  with:
+    # Prefix that is used for the git tag
+    tag-prefix: # optional, default is 
+    # Words list that trigger a minor version bump
+    minor-wording: # optional, default is feat,minor
+    # Words list that trigger a major version bump
+    major-wording: # optional, default is BREAKING CHANGE,major
+    # Words list that trigger a patch version bump
+    patch-wording: # optional
+    # Words list that trigger a rc version bump
+    rc-wording: # optional, default is pre-alpha,pre-beta,pre-rc
+    # Avoid to add a TAG to the version update commit
+    skip-tag: # optional, default is false
+    # Custom dir to the package
+    PACKAGEJSON_DIR: # optional, default is 
+    # A separate branch to perform the version bump on
+    target-branch: # optional, default is 
+    # Set a default version bump to use
+    default: # optional, default is patch
+    # Set a custom preid for prerelease build
+    preid: # optional, default is rc
+    # Set a custom commit message for version bump commit
+    commit-message: # optional, default is 
+    # Set to false to skip pushing the new tag
+    push: # optional, default is true

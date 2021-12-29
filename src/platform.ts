@@ -65,7 +65,7 @@ export class AugustSmartLockPlatform implements DynamicPlatformPlugin {
       this.Session = session;
 
       augustGetLocks(session, this.log).then(locks => {
-        this.log.debug(JSON.stringify(locks));
+        this.log.info(JSON.stringify(locks));
 
         // filter out locks that are not in the config
         const filteredLocks = this.config['filter']

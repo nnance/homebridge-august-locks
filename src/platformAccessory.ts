@@ -147,7 +147,6 @@ export class AugustSmartLockAccessory {
       this.service.updateCharacteristic(this.platform.Characteristic.LockCurrentState, currentState);
     }).catch((error) => {
       this.platform.log.error('Get Lock Status ->', error);
-      throw new this.platform.api.hap.HapStatusError(this.platform.api.hap.HAPStatus.SERVICE_COMMUNICATION_FAILURE);
     });
   }
 }

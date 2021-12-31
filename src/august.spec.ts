@@ -1,7 +1,7 @@
 import { describe, it } from 'mocha';
 import { expect } from 'chai';
 import nock = require('nock');
-import { AugustSessionOptions, augustStartSession } from '../src/august';
+import { augustGetLockStatus, AugustLockStatus, AugustSessionOptions, augustStartSession } from '../src/august';
 
 class NullLogger {
   info() {
@@ -25,7 +25,10 @@ class NullLogger {
   }
 }
 
+const logger = new NullLogger();
+
 describe('august mocked tests', () => {
+
   it('can login with existing session', async () => {
     mockLoginRequest();
     mockGetUser();
@@ -65,6 +68,28 @@ describe('august mocked tests', () => {
     await startSession();
     expect(mock.isDone()).to.be.true;
   });
+
+  it('can get lock status', async () => {
+    mockLoginRequest();
+    mockGetUser();
+    mockGetLockStatus('yyyyyyyy-yyyy-yyyy-yyyy-yyyyyyyyyyyy');
+
+    const session = await startSession();
+    const res = await augustGetLockStatus(session, 'yyyyyyyy-yyyy-yyyy-yyyy-yyyyyyyyyyyy', logger);
+
+    expect(res).to.equal(AugustLockStatus.LOCKED);
+  });
+
+  it('if invalid lock status returns unknown', async () => {
+    mockLoginRequest();
+    mockGetUser();
+    mockGetLockStatus('yyyyyyyy-yyyy-yyyy-yyyy-yyyyyyyyyyyy', false);
+
+    const session = await startSession();
+    const res = await augustGetLockStatus(session, 'yyyyyyyy-yyyy-yyyy-yyyy-yyyyyyyyyyyy', logger);
+
+    expect(res).to.equal(AugustLockStatus.UNKNOWN);
+  });
 });
 
 function startSession(code = '') {
@@ -75,7 +100,7 @@ function startSession(code = '') {
     password: 'password',
     code: code,
   };
-  return augustStartSession(options, new NullLogger());
+  return augustStartSession(options, logger);
 }
 
 function mockLoginRequest(validSession = true): nock.Scope {
@@ -134,3 +159,14 @@ function mockSendCode(): nock.Scope {
       },
     );
 }
+
+function mockGetLockStatus(lockId: string, success = true): nock.Scope {
+  return nock('https://api-production.august.com')
+    .put(`/remoteoperate/${lockId}/status`)
+    .reply(200,
+      {
+        'status': success ? 'kAugLockState_Locked' : 'kAugLockState_Unknown',
+      },
+    );
+}
+

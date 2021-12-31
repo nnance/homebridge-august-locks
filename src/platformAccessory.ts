@@ -142,7 +142,9 @@ export class AugustSmartLockAccessory {
 
       const currentState = status === AugustLockStatus.LOCKED
         ? this.platform.Characteristic.LockCurrentState.SECURED
-        : this.platform.Characteristic.LockCurrentState.UNSECURED;
+        : status === AugustLockStatus.UNLOCKED
+          ? this.platform.Characteristic.LockCurrentState.UNSECURED
+          : this.platform.Characteristic.LockCurrentState.UNKNOWN;
 
       this.service.updateCharacteristic(this.platform.Characteristic.LockCurrentState, currentState);
     }).catch((error) => {

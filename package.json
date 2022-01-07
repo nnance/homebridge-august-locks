@@ -1,7 +1,7 @@
 {
   "displayName": "Homebridge August Smart Locks",
   "name": "homebridge-august-locks",
-  "version": "1.7.3",
+  "version": "1.7.4",
   "description": "Homebridge Plugin for August Smart Locks.",
   "license": "Apache-2.0",
   "repository": {

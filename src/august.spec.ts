@@ -1,31 +1,16 @@
 import { describe, it } from 'mocha';
 import { expect } from 'chai';
+import { spy } from 'sinon';
 import nock = require('nock');
 import { augustGetLockStatus, AugustLockStatus, AugustSessionOptions, augustStartSession } from '../src/august';
 
-class NullLogger {
-  info() {
-    null;
-  }
-
-  warn() {
-    null;
-  }
-
-  error() {
-    null;
-  }
-
-  debug() {
-    null;
-  }
-
-  log() {
-    null;
-  }
-}
-
-const logger = new NullLogger();
+const mockLogger = {
+  log: spy(),
+  info: spy(),
+  warn: spy(),
+  debug: spy(),
+  error: spy(),
+};
 
 describe('august mocked tests', () => {
 
@@ -75,20 +60,22 @@ describe('august mocked tests', () => {
     mockGetLockStatus('yyyyyyyy-yyyy-yyyy-yyyy-yyyyyyyyyyyy');
 
     const session = await startSession();
-    const res = await augustGetLockStatus(session, 'yyyyyyyy-yyyy-yyyy-yyyy-yyyyyyyyyyyy', logger);
+    const res = await augustGetLockStatus(session, 'yyyyyyyy-yyyy-yyyy-yyyy-yyyyyyyyyyyy', mockLogger);
 
     expect(res).to.equal(AugustLockStatus.LOCKED);
   });
 
-  it('if invalid lock status returns unknown', async () => {
+  it('if invalid lock status throw error', async () => {
     mockLoginRequest();
     mockGetUser();
     mockGetLockStatus('yyyyyyyy-yyyy-yyyy-yyyy-yyyyyyyyyyyy', false);
 
-    const session = await startSession();
-    const res = await augustGetLockStatus(session, 'yyyyyyyy-yyyy-yyyy-yyyy-yyyyyyyyyyyy', logger);
+    const handler = spy();
 
-    expect(res).to.equal(AugustLockStatus.UNKNOWN);
+    const session = await startSession();
+    await augustGetLockStatus(session, 'yyyyyyyy-yyyy-yyyy-yyyy-yyyyyyyyyyyy', mockLogger).catch(handler);
+
+    expect(handler.called).to.be.true;
   });
 });
 
@@ -100,7 +87,7 @@ function startSession(code = '') {
     password: 'password',
     code: code,
   };
-  return augustStartSession(options, logger);
+  return augustStartSession(options, mockLogger);
 }
 
 function mockLoginRequest(validSession = true): nock.Scope {
@@ -165,7 +152,7 @@ function mockGetLockStatus(lockId: string, success = true): nock.Scope {
     .put(`/remoteoperate/${lockId}/status`)
     .reply(200,
       {
-        'status': success ? 'kAugLockState_Locked' : 'kAugLockState_Unknown',
+        'status': success ? 'kAugLockState_Locked' : undefined,
       },
     );
 }

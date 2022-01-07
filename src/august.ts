@@ -216,6 +216,7 @@ export async function augustGetLockStatus(session: AugustSession, lockId: string
   const options = addToken(getRequestOptions(`/remoteoperate/${lockId}/status`, 'PUT'), session.token);
 
   const results = await makeRequest(options, new Uint8Array(), log);
+
   const status = results.payload['status'];
 
   if (status === 'kAugLockState_Locked') {
@@ -223,8 +224,8 @@ export async function augustGetLockStatus(session: AugustSession, lockId: string
   } else if (status === 'kAugLockState_Unlocked') {
     return AugustLockStatus.UNLOCKED;
   } else {
-    log.info(`Unknown lock status: ${status} for lock ${lockId}`);
-    return AugustLockStatus.UNKNOWN;
+    log.info(JSON.stringify(results.payload));
+    throw new Error(`Unknown lock status for lock ${lockId}`);
   }
 }
 

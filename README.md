@@ -1,29 +1,19 @@
-
 <p align="center">
-
 <img src="https://github.com/homebridge/branding/raw/master/logos/homebridge-wordmark-logo-vertical.png" width="150">
-
 </p>
 
+# Homebridge August Door Sense Plugin
 
-# Homebridge August Locks Plugin
+This is a homebridge plugin that solely supports August Door Sense door sensors. It could be used in combination with native HomeKit locks or other August Smart Locks plugins.
 
-This is a Homebridge Plugin to control August Locks.  This plugin requires internet enabled locks which includes the WIFI locks or locks that use the WIFI bridge.    This is an updated plugin based on the latest Homebridge template and the latest version of the August lock API that has been tested with August (4th Generation) locks but should work with all other locks.
-
-This plugin is loosely based on [homebridge-august-smart-locks](https://github.com/techyowl/homebridge-august-smart-locks) though completely rewritten with no external dependencies.   
-
-Key features of this plugin includes:
-
-1. Based on the latest Homebridge TypeScript template (v2.0.0)
-2. Supports all August locks (4th Generation)
-3. Uses the latest August API (v1.0.0)
+This plugin is based on [homebridge-august-locks](https://github.com/nnance/homebridge-august-locks).
 
 ## Installation
 
 Please install the plugin with the following command:
 
 ```
-npm install -g homebridge-august-locks
+npm install -g homebridge-august-door-sense
 ```
 
 or use the Homebridge Web Interface to setup the Plugin by searching for 'august'
@@ -34,13 +24,13 @@ or use the Homebridge Web Interface to setup the Plugin by searching for 'august
 {
     "platforms": [
         {
-            "platform": "AugustLocks",
+            "platform": "AugustDoorSense",
             "email": "<YOUR-EMAIL-ADDRESS>",
             "phone": "<YOUR-PHONE-NUMBER>",
             "password": "<YOUR-PASSWORD>",
             "code": "<2FA-CODE>",
             "installId": "<RANDOM-STATIC-STRING>",
-            "filter": "<lockId>,<lockId>",
+            "filter": "<lockId>[,<lockId>,...]",
             "securityToken": "<AUGUSTS-API-KEY>",
         }
     ]
@@ -65,11 +55,3 @@ or use the Homebridge Web Interface to setup the Plugin by searching for 'august
 **securityToken**: Augusts API Key, currently pulled from a decompiled apk of the August Android App, August may change this api key as they so wish to. Use this property to update it if you follow a procedure to obtain the current api key for Augusts API Server.
 
 **refreshInterval**: duration in seconds that the plugin will poll the API for status changes to keep the lock current when there isn't any major state changes
-
-## Usage
-
-* When you change the HomeKit switch to locked, the smart lock with lock the door.
-* When you change the HomeKit switch from locked to unlocked the smart lock will unlock the app.
-* When you use Siri to unlock the door, it will unlock the door and inform you of the status.
-* When you use Siri to lock the door, it will lock the door and inform you of the status.
-

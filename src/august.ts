@@ -15,8 +15,8 @@ export type AugustLock = {
   houseName: string;
 };
 
-export enum AugustLockStatus {
-  LOCKED, UNLOCKED, UNKNOWN,
+export enum AugustDoorStatus {
+  CLOSED, OPEN, UNKNOWN,
 }
 
 export type AugustSession = {
@@ -212,33 +212,18 @@ export async function augustGetLocks(session: AugustSession, log: Logger): Promi
   }
 }
 
-export async function augustGetLockStatus(session: AugustSession, lockId: string, log: Logger): Promise<AugustLockStatus> {
+export async function augustGetDoorStatus(session: AugustSession, lockId: string, log: Logger): Promise<AugustDoorStatus> {
   const options = addToken(getRequestOptions(`/remoteoperate/${lockId}/status`, 'PUT'), session.token);
 
   const results = await makeRequest(options, new Uint8Array(), log);
 
-  const status = results.payload['status'];
+  const status = results.payload['doorState'];
 
-  if (status === 'kAugLockState_Locked') {
-    return AugustLockStatus.LOCKED;
-  } else if (status === 'kAugLockState_Unlocked') {
-    return AugustLockStatus.UNLOCKED;
+  if (status === 'kAugDoorState_Closed') {
+    return AugustDoorStatus.CLOSED;
+  } else if (status === 'kAugDoorState_Open') {
+    return AugustDoorStatus.OPEN;
   } else {
-    log.info(JSON.stringify(results.payload));
-    throw new Error(`Unknown lock status for lock ${lockId}`);
+    return AugustDoorStatus.UNKNOWN;
   }
-}
-
-export async function augustSetStatus(
-  session: AugustSession,
-  lockId: string,
-  status: AugustLockStatus,
-  log: Logger,
-): Promise<AugustLockStatus> {
-  const url = status === AugustLockStatus.LOCKED ? `/remoteoperate/${lockId}/lock` : `/remoteoperate/${lockId}/unlock`;
-  const options = addToken(getRequestOptions(url, 'PUT'), session.token);
-
-  const results = await makeRequest(options, new Uint8Array(), log);
-  const update = results.payload['status'] === 'kAugLockState_Locked' ? AugustLockStatus.LOCKED : AugustLockStatus.UNLOCKED;
-  return update;
 }

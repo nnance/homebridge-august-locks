@@ -2,9 +2,9 @@
 <img src="https://github.com/homebridge/branding/raw/master/logos/homebridge-wordmark-logo-vertical.png" width="150">
 </p>
 
-# Homebridge August Door Sense Plugin
+# Homebridge August DoorSense Plugin
 
-This is a homebridge plugin that solely supports August Door Sense door sensors. It could be used in combination with native HomeKit locks or other August Smart Locks plugins.
+This is a homebridge plugin that solely supports August DoorSense door sensors. It could be used in combination with native HomeKit locks or other August Smart Locks plugins.
 
 This plugin is based on [homebridge-august-locks](https://github.com/nnance/homebridge-august-locks).
 

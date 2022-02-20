@@ -9,7 +9,7 @@
         "title": "Name",
         "type": "string",
         "required": true,
-        "default": "August Door Sense"
+        "default": "August DoorSense"
       },
       "email": {
 				"title": "Email",

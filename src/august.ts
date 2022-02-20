@@ -16,7 +16,7 @@ export type AugustLock = {
 };
 
 export enum AugustDoorStatus {
-  CLOSED, OPEN, UNKNOWN,
+  CLOSED, OPEN,
 }
 
 export type AugustSession = {
@@ -224,6 +224,6 @@ export async function augustGetDoorStatus(session: AugustSession, lockId: string
   } else if (status === 'kAugDoorState_Open') {
     return AugustDoorStatus.OPEN;
   } else {
-    return AugustDoorStatus.UNKNOWN;
+    throw new Error('Unknown door status: ' + status);
   }
 }

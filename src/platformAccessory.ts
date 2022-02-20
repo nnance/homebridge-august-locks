@@ -46,12 +46,7 @@ export class AugustSmartLockAccessory {
     const id = this.accessory.context.device['id'];
 
     augustGetDoorStatus(this.platform.Session!, id, this.platform.log).then((status) => {
-
-      this.platform.log.debug('Get Lock Status ->', status);
-
-      if (status === AugustDoorStatus.UNKNOWN) {
-        throw new Error('Door status unknown');
-      }
+      this.platform.log.debug('Get Door Status ->', status);
 
       const currentState = status === AugustDoorStatus.OPEN
         ? this.platform.Characteristic.ContactSensorState.CONTACT_NOT_DETECTED
@@ -59,7 +54,7 @@ export class AugustSmartLockAccessory {
 
       this.service.updateCharacteristic(this.platform.Characteristic.ContactSensorState, currentState);
     }).catch((error) => {
-      this.platform.log.error('Get Lock Status ->', error);
+      this.platform.log.error('GetDoorStatus threw an error:\n', error);
     });
   }
 }

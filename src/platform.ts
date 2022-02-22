@@ -69,7 +69,7 @@ export class AugustSmartLockPlatform implements DynamicPlatformPlugin {
 
         // filter out locks that are not in the config
         const filteredLocks = this.config['filter']
-          ? locks.filter(lock => !lock.id.toLowerCase().includes(this.config['filter'].toLowerCase()))
+          ? locks.filter(lock => !this.config['filter'].toLowerCase().includes(lock.id.toLowerCase()))
           : locks;
 
         this.registerLocks(filteredLocks);

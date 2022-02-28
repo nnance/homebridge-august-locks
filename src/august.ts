@@ -104,10 +104,12 @@ async function makeRequest(options: RequestOptions, data: Uint8Array, log: Logge
         log.debug(buffStr);
 
         let payload;
-        try {
-          payload = JSON.parse(buffStr);
-        } catch (error) {
-          log.error(`Error parsing JSON: ${buffStr}`);
+        if (res.statusCode === 200) {
+          try {
+            payload = JSON.parse(buffStr);
+          } catch (error) {
+            log.error(`Error parsing JSON: ${buffStr}`);
+          }
         }
 
         resolve({
@@ -225,15 +227,18 @@ export async function augustGetDoorStatus(session: AugustSession, lockId: string
 
   const results = await makeRequest(options, new Uint8Array(), log);
 
-  const status = results.payload['doorState'];
-
-  if (status === 'kAugDoorState_Closed') {
-    return AugustDoorStatus.CLOSED;
-  } else if (status === 'kAugDoorState_Open') {
-    return AugustDoorStatus.OPEN;
-  } else if (!status) {
-    return AugustDoorStatus.UNKNOWN;
+  if (results.status === 200 && results.payload) {
+    const status = results.payload['doorState'];
+    if (status === 'kAugDoorState_Closed') {
+      return AugustDoorStatus.CLOSED;
+    } else if (status === 'kAugDoorState_Open') {
+      return AugustDoorStatus.OPEN;
+    } else if (!status) {
+      return AugustDoorStatus.UNKNOWN;
+    } else {
+      throw new Error(`Unknown door status: ${status}`);
+    }
   } else {
-    throw new Error('Unknown door status: ' + status);
+    throw new Error(`Error getting door status: ${results.status}`);
   }
 }

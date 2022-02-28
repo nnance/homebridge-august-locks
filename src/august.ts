@@ -100,12 +100,20 @@ async function makeRequest(options: RequestOptions, data: Uint8Array, log: Logge
         log.debug(`statusCode: ${res.statusCode}`);
 
         const buff = d as Buffer;
-        log.debug(buff.toString('utf-8'));
+        const buffStr = buff.toString('utf8');
+        log.debug(buffStr);
+
+        let payload;
+        try {
+          payload = JSON.parse(buffStr);
+        } catch (error) {
+          log.error(`Error parsing JSON: ${buffStr}`);
+        }
 
         resolve({
           status: res.statusCode,
           token: res.headers['x-august-access-token'] as string,
-          payload: JSON.parse(buff.toString()),
+          payload: payload,
         });
       });
     });

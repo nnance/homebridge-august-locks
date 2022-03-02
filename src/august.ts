@@ -110,6 +110,8 @@ async function makeRequest(options: RequestOptions, data: Uint8Array, log: Logge
           } catch (error) {
             log.error(`Error parsing JSON: ${buffStr}`);
           }
+        } else {
+          log.debug(`Received non-200 HTTP response ${res.statusCode}:\n${buffStr}`);
         }
 
         resolve({
@@ -234,11 +236,12 @@ export async function augustGetDoorStatus(session: AugustSession, lockId: string
     } else if (status === 'kAugDoorState_Open') {
       return AugustDoorStatus.OPEN;
     } else if (!status) {
+      log.info(`Door status for lock ${lockId} unknown. Is DoorSense enabled for the device?`);
       return AugustDoorStatus.UNKNOWN;
     } else {
       throw new Error(`Unknown door status: ${status}`);
     }
   } else {
-    throw new Error(`Error getting door status: ${results.status}`);
+    return AugustDoorStatus.UNKNOWN;
   }
 }

@@ -48,10 +48,6 @@ export class AugustSmartLockAccessory {
     augustGetDoorStatus(this.platform.Session!, id, this.platform.log).then((status) => {
       this.platform.log.debug('Get Door Status ->', status);
 
-      if (status === AugustDoorStatus.UNKNOWN) {
-        this.platform.log.error(`Door status for lock ${id} unknown. Is DoorSense enabled for the device?`);
-      }
-
       const currentState = status === AugustDoorStatus.OPEN
         ? this.platform.Characteristic.ContactSensorState.CONTACT_NOT_DETECTED
         : this.platform.Characteristic.ContactSensorState.CONTACT_DETECTED;

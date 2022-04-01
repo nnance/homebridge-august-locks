@@ -1,4 +1,7 @@
 # Change Log
+## [2.0.1] - 2022-03-31
+### Changes
+- Miscellaneous stability improvements.
 
 ## [2.0.0] - 2022-03-23
 ### Changes

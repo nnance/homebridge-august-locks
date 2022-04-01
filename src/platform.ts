@@ -63,8 +63,9 @@ export class AugustSmartLockPlatform implements DynamicPlatformPlugin {
   }
 
   registerLocks(locks: AugustLock[]) {
+    const usedAccessories = new Set<string>();
     for (const lock of locks) {
-      const uuid = this.api.hap.uuid.generate(lock.id);
+      const uuid = this.api.hap.uuid.generate(`${lock.id}-doorSense`);
       const existingAccessory = this.accessories.find(accessory => accessory.UUID === uuid);
 
       if (existingAccessory) {
@@ -79,7 +80,13 @@ export class AugustSmartLockPlatform implements DynamicPlatformPlugin {
         new AugustSmartLockAccessory(this, accessory);
         this.api.registerPlatformAccessories(PLUGIN_NAME, PLATFORM_NAME, [accessory]);
       }
+
+      usedAccessories.add(uuid);
     }
+
+    const unusedAccessories = this.accessories.filter(accessory => !usedAccessories.has(accessory.UUID));
+    unusedAccessories.forEach(accessory => this.log.info(`Pruning unused accessory ${accessory.UUID} from cache`));
+    this.api.unregisterPlatformAccessories(PLUGIN_NAME, PLATFORM_NAME, unusedAccessories);
   }
 
 }

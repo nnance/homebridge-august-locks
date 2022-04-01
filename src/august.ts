@@ -94,7 +94,7 @@ function addToken(options: RequestOptions, token:string): RequestOptions {
 }
 
 async function makeRequest(options: RequestOptions, data: Uint8Array, log: Logger): Promise<AugustResponse> {
-  return new Promise((resolve, reject) => {
+  return new Promise((resolve) => {
     const req = request(options, res => {
       res.on('data', d => {
         log.debug(`statusCode: ${res.statusCode}`);
@@ -123,8 +123,7 @@ async function makeRequest(options: RequestOptions, data: Uint8Array, log: Logge
     });
 
     req.on('error', error => {
-      log.error(`request error: ${error}`);
-      reject(error);
+      log.error(`Error reaching August server: ${error}`);
     });
 
     req.write(data);

@@ -1,4 +1,8 @@
 # Change Log
+## [2.0.2] - 2022-04-02
+### Changes
+- Minor security-related precautions.
+
 ## [2.0.1] - 2022-03-31
 ### Changes
 - Miscellaneous stability improvements.

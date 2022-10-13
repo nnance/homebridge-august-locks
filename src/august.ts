@@ -96,18 +96,24 @@ function addToken(options: RequestOptions, token:string): RequestOptions {
 async function makeRequest(options: RequestOptions, data: Uint8Array, log: Logger): Promise<AugustResponse> {
   return new Promise((resolve, reject) => {
     const req = request(options, res => {
+      let returnValue = '';
       res.on('data', d => {
         log.debug(`statusCode: ${res.statusCode}`);
 
-        const buff = d as Buffer;
-        log.debug(buff.toString('utf-8'));
-
-        resolve({
-          status: res.statusCode,
-          token: res.headers['x-august-access-token'] as string,
-          payload: JSON.parse(buff.toString()),
-        });
+        returnValue += d;
+        log.debug(d.toString('utf-8'));
       });
+       
+      res.on('end', () => {
+        if (res.statusCode === 200) {
+          resolve({
+            status: res.statusCode,
+            token: res.headers['x-august-access-token'] as string,
+            payload: JSON.parse(returnValue.toString()),
+          });
+        } else {
+          reject(returnValue);
+        }
     });
 
     req.on('error', error => {
